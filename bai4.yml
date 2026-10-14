@@ -1,0 +1,30 @@
+name: Deploy to VPS
+
+on:
+  workflow_run:
+    workflows: ["Build and Publish Docker Image"] # Tên hoặc ID của workflow build image trước đó (hoặc tích hợp chung file)
+    types:
+      - completed
+
+jobs:
+  deploy-vps:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Thực thi câu lệnh triển khai trên VPS qua SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Đăng nhập GHCR trên VPS (nếu cần thiết, hoặc cấu hình từ trước)
+            # docker login ghcr.io -u ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
+            
+            # Kéo Image mới nhất
+            docker pull ghcr.io/${{ github.actor }}/app:latest
+            
+            # Khởi chạy lại container
+            docker stop app || true 
+            docker rm app || true 
+            docker run -d --name app -p 8080:8080 ghcr.io/${{ github.actor }}/app:latest
